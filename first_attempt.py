@@ -71,4 +71,11 @@ end = time()
 
 print((end - start) / N_TUPLES * 1*1000*1000)
 
+# TO-DO
+# Ordinare D, P, T
+# Pulire codice
+# Strutturare codice
+# Implementare nuovi generatori
+
+
 

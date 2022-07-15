@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from generator import RandomGenerator
+from tqdm import tqdm
 
 
 def parse_D(D_df: pd.DataFrame, T_df: pd.DataFrame) -> pd.DataFrame:
@@ -62,7 +63,7 @@ tuples = RandomGenerator(N_TUPLES, TUPLES_SIZE)
 
 N = mat_D.shape[0] * mat_D.shape[1]
 
-for t in tuples:
+for t in tqdm(tuples, desc='Testing tuples', total=N_TUPLES):
     a1, a2, a3 = t
     w_D = np.multiply(a1, mat_D)
     w_T = np.multiply(a2, vec_T)

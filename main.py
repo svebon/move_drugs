@@ -63,11 +63,22 @@ tuples = RandomGenerator(N_TUPLES, TUPLES_SIZE)
 
 N = mat_D.shape[0] * mat_D.shape[1]
 
+best_tuple = None
+best_O_R = 1
+
 for t in tqdm(tuples, desc='Testing tuples', total=N_TUPLES):
     a1, a2, a3 = t
+
     w_D = np.multiply(a1, mat_D)
     w_T = np.multiply(a2, vec_T)
 
     S = w_D + w_T + a3
 
     O_R = np.sqrt((S - mat_P) ** 2) / N
+
+    if O_R < best_O_R:
+        best_tuple = t
+        best_O_R = O_R
+
+print(f'Best tuple: {best_tuple}')
+print(f'Best O_R: {best_O_R}')

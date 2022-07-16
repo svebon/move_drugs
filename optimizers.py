@@ -54,15 +54,16 @@ class RandomOptimizer(Optimizer):
 
 
 class GPOptimizer(Optimizer):
-    def __init__(self, mat_D, vec_T, mat_P, n_tuples=1000 * 1000, tuples_size=3, n_jobs=-1):
+    def __init__(self, mat_D, vec_T, mat_P, n_tuples=1000 * 1000, tuples_size=3, n_jobs=-1, min_improvement=0.01):
         super().__init__(mat_D, vec_T, mat_P)
         self.n_tuples = n_tuples
         self.tuples_size = tuples_size
         self.n_jobs = n_jobs
+        self.min_improvement = min_improvement
 
     def optimize(self):
         space = self.get_space()
-        result = gp_minimize(self.get_O_R, space, n_calls=self.n_tuples, n_jobs=self.n_jobs)
+        result = gp_minimize(self.get_O_R, space, n_calls=self.n_tuples, n_jobs=self.n_jobs, xi=self.min_improvement)
 
         self.best_O_R = result.fun
         self.best_tuple = result.x

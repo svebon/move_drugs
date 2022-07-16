@@ -1,6 +1,8 @@
 import numpy as np
 from generator import RandomGenerator
 from tqdm import tqdm
+from skopt.space import Real
+from skopt import gp_minimize
 
 
 class Optimizer:
@@ -49,3 +51,23 @@ class RandomOptimizer(Optimizer):
                     self.best_O_R = O_R
 
         return {'best_tuple': self.best_tuple, 'best_O_R': self.best_O_R}
+
+
+class GPOptimizer(Optimizer):
+    def __init__(self, mat_D, vec_T, mat_P, n_tuples=1000 * 1000, tuples_size=3, n_jobs=-1):
+        super().__init__(mat_D, vec_T, mat_P)
+        self.n_tuples = n_tuples
+        self.tuples_size = tuples_size
+        self.n_jobs = n_jobs
+
+    def optimize(self):
+        space = self.get_space()
+        result = gp_minimize(self.get_O_R, space, n_calls=self.n_tuples, n_jobs=self.n_jobs)
+
+        self.best_O_R = result.fun
+        self.best_tuple = result.x
+
+        return {'best_tuple': self.best_tuple, 'best_O_R': self.best_O_R}
+
+    def get_space(self):
+        return [Real(low=0, high=1)] * self.tuples_size

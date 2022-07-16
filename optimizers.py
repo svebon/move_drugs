@@ -42,6 +42,8 @@ class RandomOptimizer(Optimizer):
             for t in pbar:
                 O_R = self.get_O_R(t)
 
+                pbar.set_postfix(O_R=O_R, alphas=t)
+
                 if O_R < self.best_O_R:
                     self.best_tuple = t
                     self.best_O_R = O_R

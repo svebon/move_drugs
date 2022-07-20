@@ -11,7 +11,8 @@ class Optimizer:
     Optimizer interface
     """
     best_tuple: tuple = None  #: Best tuple of alphas
-    best_O_R: float = 1  #: Best O_R
+    best_O_R: np.ndarray  #: Best O_R
+    best_O_R_avg: float = 1  #: Best O_R average
 
     def __init__(self, mat_D: np.ndarray, vec_T: np.ndarray, mat_P: np.ndarray):
         """
@@ -29,7 +30,7 @@ class Optimizer:
         self.mat_P = mat_P
         self.N = mat_D.shape[0] * mat_D.shape[1]
 
-    def get_O_R(self, alphas) -> float:
+    def get_O_R(self, alphas) -> np.ndarray:
         """
         Calculates O_R for given alphas
 
@@ -39,7 +40,7 @@ class Optimizer:
             List of floats
         Returns
         -------
-        float: O_R value
+        numpy.ndarray: O_R value
         """
         a1, a2, a3 = alphas
         w_D = np.multiply(a1, self.mat_D)
@@ -51,12 +52,20 @@ class Optimizer:
 
         return O_R
 
-    # Must set self.best_tuple and self.best_O_R and return {best_tuple: self.best_tuple, best_O_R: self.best_O_R}
+    def better(self, O_R: np.ndarray):
+        return self.mat_avg(O_R) < self.best_O_R_avg
+
+    # Must set self.best_tuple and self.best_O_R and return {'best_tuple': self.best_tuple, 'best_O_R_avg': self.best_O_R_avg}
     def optimize(self):
         """
-        Must set self.best_tuple and self.best_O_R and return {best_tuple: self.best_tuple, best_O_R: self.best_O_R}
+        Must set self.best_tuple and self.best_O_R and return {'best_tuple': self.best_tuple, 'best_O_R_avg': self.best_O_R_avg}
         """
         raise NotImplementedError
+
+    @staticmethod
+    def mat_avg(mat: np.ndarray) -> float:
+        n_elements = mat.shape[0] * mat.shape[1]
+        return np.sum(mat) / n_elements
 
 
 class RandomOptimizer(Optimizer):
@@ -80,7 +89,7 @@ class RandomOptimizer(Optimizer):
 
         Returns
         -------
-        dict: {'best_tuple': self.best_tuple, 'best_O_R': self.best_O_R}
+        dict: {'best_tuple': self.best_tuple, 'best_O_R_avg': self.best_O_R_avg}
         """
         tuples = RandomGenerator(self.n_tuples, self.tuples_size)
 
@@ -88,13 +97,12 @@ class RandomOptimizer(Optimizer):
             for t in pbar:
                 O_R = self.get_O_R(t)
 
-                pbar.set_postfix(O_R=O_R, alphas=t)
-
-                if O_R < self.best_O_R:
+                if self.better(O_R):
                     self.best_tuple = t
                     self.best_O_R = O_R
+                    self.best_O_R_avg = self.mat_avg(O_R)
 
-        return {'best_tuple': self.best_tuple, 'best_O_R': self.best_O_R}
+        return {'best_tuple': self.best_tuple, 'best_O_R_avg': self.best_O_R_avg}
 
 
 class GPOptimizer(Optimizer):
@@ -131,7 +139,7 @@ class GPOptimizer(Optimizer):
         self.best_O_R = result.fun
         self.best_tuple = result.x
 
-        return {'best_tuple': self.best_tuple, 'best_O_R': self.best_O_R}
+        return {'best_tuple': self.best_tuple, 'best_O_R_avg': self.best_O_R_avg}
 
     @property
     def space(self):
@@ -187,7 +195,7 @@ class BHOptimizer(Optimizer):
         self.best_O_R = result.fun
         self.best_tuple = result.x
 
-        return {'best_tuple': self.best_tuple, 'best_O_R': self.best_O_R}
+        return {'best_tuple': self.best_tuple, 'best_O_R_avg': self.best_O_R_avg}
 
     def save_minimum(self, x, O_R, accepted):
         """

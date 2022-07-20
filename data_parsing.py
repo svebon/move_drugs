@@ -20,6 +20,9 @@ class CustomDataFrame:
     def receptors(self):
         raise NotImplementedError
 
+    def filter_receptors(self, receptors: list):
+        self.data = self.data[receptors]
+
 
 class DockingEnergies(CustomDataFrame):
     def __init__(self):

@@ -23,6 +23,12 @@ class CustomDataFrame:
     def filter_receptors(self, receptors: list):
         self.data = self.data[receptors]
 
+    def to_numpy(self):
+        if isinstance(self.data, pd.DataFrame):
+            return self.data.to_numpy()
+
+        return self.data.to_numpy().reshape(self.data.shape[0], )  # Series to 1D array
+
 
 class DockingEnergies(CustomDataFrame):
     def __init__(self):
@@ -34,10 +40,6 @@ class DockingEnergies(CustomDataFrame):
         self.remove_unnamed_cols()
         self.sort()
         self.data = self.data.apply(pd.to_numeric)
-
-    @property
-    def mat(self):
-        return self.data.to_numpy()
 
     @property
     def receptors(self):
@@ -56,12 +58,8 @@ class Interactions(CustomDataFrame):
         self.data.index = self.data.index.rename('Drugs')
 
     @property
-    def mat(self):
-        return self.data.to_numpy()
-
-    @property
     def receptors(self):
-        return self.df.columns.tolist()
+        return self.data.columns.tolist()
 
 
 class NamesMap:

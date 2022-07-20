@@ -4,6 +4,7 @@ from tqdm import tqdm
 from skopt.space import Real
 from skopt import gp_minimize
 from scipy.optimize import basinhopping
+import warnings
 
 
 class Optimizer:
@@ -145,6 +146,7 @@ class GPOptimizer(Optimizer):
         self.n_tuples = n_tuples
         self.tuples_size = tuples_size
         self.n_jobs = n_jobs
+        self.pbar = tqdm(desc='Testing tuples', total=self.n_tuples)
 
     def optimize(self):
         """
@@ -155,25 +157,39 @@ class GPOptimizer(Optimizer):
         dict: {'best_tuple': self.best_tuple, 'best_O_R': self.best_O_R}
         """
         space = self.space
+        warnings.simplefilter('ignore')
         result = gp_minimize(self.get_O_R_avg, space, n_calls=self.n_tuples, n_jobs=self.n_jobs,
                              callback=self.check_min_imp)
+        warnings.simplefilter('default')
 
         self.best_O_R_avg = result.fun
         self.best_tuple = result.x
         self.best_O_R = self.get_O_R(result.x)
 
+        if self.pbar:
+            self.pbar.set_description('Completed')
+            self.pbar.close()
+
         return {'best_tuple': self.best_tuple, 'best_O_R_avg': self.best_O_R_avg}
 
     def check_min_imp(self, result) -> bool:
+        if result.fun > self.best_O_R_avg:
+            self.pbar.update()
+            return False
+
         if self.best_O_R_avg - result.fun < self.min_imp:
             self.failed_iterations += 1
+            self.pbar.set_postfix(best_O_R=self.best_O_R_avg, fails=f'{self.failed_iterations}/{self.min_imp_timeout}')
 
             if self.failed_iterations >= self.min_imp_timeout:
+                self.pbar.set_description('Min Improvement timeout reached')
+                self.pbar.close()
                 return True
         else:
             self.failed_iterations = 0
 
         self.best_O_R_avg = result.fun
+        self.pbar.update()
 
     @property
     def space(self):

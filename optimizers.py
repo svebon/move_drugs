@@ -10,8 +10,8 @@ class Optimizer:
     """
     Optimizer interface
     """
-    best_tuple: tuple = None    #: Best tuple of alphas
-    best_O_R: float = 1         #: Best O_R
+    best_tuple: tuple = None  #: Best tuple of alphas
+    best_O_R: float = 1  #: Best O_R
 
     def __init__(self, mat_D: np.ndarray, vec_T: np.ndarray, mat_P: np.ndarray):
         """
@@ -181,7 +181,8 @@ class BHOptimizer(Optimizer):
         -------
         dict: {'best_tuple': self.best_tuple, 'best_O_R': self.best_O_R}
         """
-        result = basinhopping(self.get_O_R, self.guess, niter=self.n_tuples, niter_success=self.timeout)
+        result = basinhopping(self.get_O_R, self.guess, niter=self.n_tuples, niter_success=self.timeout,
+                              callback=self.save_minimum)
 
         self.best_O_R = result.fun
         self.best_tuple = result.x

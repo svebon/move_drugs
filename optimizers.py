@@ -230,6 +230,7 @@ class BHOptimizer(Optimizer):
         self.timeout = timeout
         self.min_imp = min_imp
         self.min_imp_timeout = min_imp_timeout
+        self.pbar = tqdm(desc='Testing tuples', total=self.n_tuples)
 
     def optimize(self):
         """
@@ -239,49 +240,45 @@ class BHOptimizer(Optimizer):
         -------
         dict: {'best_tuple': self.best_tuple, 'best_O_R': self.best_O_R}
         """
-        result = basinhopping(self.get_O_R, self.guess, niter=self.n_tuples, niter_success=self.timeout,
-                              callback=self.save_minimum)
+        result = basinhopping(self.get_O_R_avg, self.guess, niter=self.n_tuples, niter_success=self.timeout,
+                              callback=self.check_min_imp, accept_test=self.acceptable)
 
-        self.best_O_R = result.fun
+        self.best_O_R_avg = result.fun
         self.best_tuple = result.x
+        self.best_O_R = self.get_O_R(result.x)
+
+        if self.pbar:
+            self.pbar.set_description('Completed')
+            self.pbar.close()
 
         return {'best_tuple': self.best_tuple, 'best_O_R_avg': self.best_O_R_avg}
 
-    def save_minimum(self, x, O_R, accepted):
-        """
-        Save the minimum found by Basin Hopping only if all alphas are positive.
+    def acceptable(self, f_new, x_new, f_old, x_old):
+        return f_new <= self.best_O_R_avg and self.acceptable_alphas(x_new)
 
-        Parameters
-        ----------
-        x: list
-            Alphas found by Basin Hopping
-        O_R: float
-            Objective function value of the minimum found
-        accepted: bool
-            True if the minimum found is accepted, False otherwise
+    def check_min_imp(self, x, O_R_avg, accepted) -> bool:
+        if not accepted:
+            return False
 
-        Returns
-        -------
-        bool: True if the minimum found is accepted but the min_imp_timeout is reached, False otherwise
-        """
-        if not accepted or not O_R < self.best_O_R:
-            return None
+        if self.best_O_R_avg - O_R_avg < self.min_imp:
+            self.failed_iterations += 1
+            self.pbar.set_postfix(best_O_R=self.best_O_R_avg,
+                                  fails=f'{self.failed_iterations}/{self.min_imp_timeout}')
 
-        positive = self.positive_alphas(x)
-        if positive:
-            old_best_O_R = self.best_O_R
-            self.best_O_R = O_R
-            self.best_tuple = x
+            if self.failed_iterations >= self.min_imp_timeout:
+                self.pbar.set_description('Min Improvement timeout reached')
+                self.pbar.close()
+                return True
+        else:
+            self.failed_iterations = 0
 
-            if old_best_O_R - O_R < self.min_imp:
-                self.min_imp_timeout -= 1
-
-                return self.min_imp_timeout < 0
+        self.best_O_R_avg = O_R_avg
+        self.pbar.update()
 
     @staticmethod
-    def positive_alphas(alphas):
+    def acceptable_alphas(alphas):
         """
-        Check if all alphas are positive.
+        Check if all alphas are in [0, 1] range
         Parameters
         ----------
         alphas: list
@@ -289,9 +286,9 @@ class BHOptimizer(Optimizer):
 
         Returns
         -------
-        bool: True if all alphas are positive, False otherwise
+        bool: True if all alphas are in [0, 1] range, False otherwise
         """
         for alpha in alphas:
-            if alpha < 0:
+            if not 0 <= alpha <= 1:
                 return False
         return True

@@ -1,35 +1,33 @@
 from optimizers import *
 import pandas as pd
-import main
+from data_parsing import *
 
 # Data's paths
-input_D = 'C:/Users/Sveva/Desktop/ML_datasets/matrix_D.csv'
-input_T = 'C:/Users/Sveva/Desktop/ML_datasets/vector_T.csv'
-input_P = 'C:/Users/Sveva/Desktop/ML_datasets/matrix_P.csv'
-nodes = 'C:/Users/Sveva/Desktop/ML_datasets/new_mapped_name.csv'
+input_D = 'C:/Users/mirco/Projects/Sveva/ML_datasets/matrix_D.csv'
+input_T = 'C:/Users/mirco/Projects/Sveva/ML_datasets/vector_T.csv'
+input_P = 'C:/Users/mirco/Projects/Sveva/ML_datasets/matrix_P.csv'
+nodes = 'C:/Users/mirco/Projects/Sveva/ML_datasets/new_mapped_name.csv'
 
 # Data loading
-content_D = pd.read_csv(input_D, sep=',', index_col=0)
-content_T = pd.read_csv(input_T)
-nodes_df = pd.read_csv(nodes, sep=';', index_col='name_T')
-content_P = pd.read_csv(input_P, sep=';', index_col=0).transpose().apply(pd.to_numeric)
+D = DockingEnergies()
 
-# DataFrames parsing
-D = main.parse_D(content_D, content_T)
-T = main.parse_T(content_T, nodes_df)
-P = main.parse_P(content_P, content_T)
+names_map = NamesMap()
+names_map.load(nodes)
 
-# Matrices and vectors creation
-mat_D = D.to_numpy()
+T = Topology(names_map)
 
-vec_T = T.to_numpy()
-vec_T = np.reshape(vec_T, (vec_T.shape[0],))
+P = Interactions()
 
-mat_P = P.to_numpy()
+D.load(input_D)
+T.load(input_T)
+P.load(input_P)
 
-optimizer = RandomOptimizer(mat_D, vec_T, mat_P)
-t, O_R = optimizer.optimize()
+D.filter_receptors(T.receptors)
+P.filter_receptors(T.receptors)
 
-print(f'Best tuple: {t}')
-print(f'Best O_R: {O_R}')
+optimizer = RandomOptimizer(D.to_numpy(), T.to_numpy(), P.to_numpy())
+result = optimizer.optimize()
+
+print(f'Best tuple: {result["best_tuple"]}')
+print(f'Best O_R: {result["best_O_R_avg"]}')
 

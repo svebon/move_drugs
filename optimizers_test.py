@@ -25,7 +25,9 @@ P.load(input_P)
 D.filter_receptors(T.receptors)
 P.filter_receptors(T.receptors)
 
-optimizer = RandomOptimizer(D.to_numpy(), T.to_numpy(), P.to_numpy())
+#optimizer = RandomOptimizer(D.to_numpy(), T.to_numpy(), P.to_numpy())
+#optimizer = GPOptimizer(D.to_numpy(), T.to_numpy(), P.to_numpy(), min_imp_timeout=50)
+optimizer = BHOptimizer(D.to_numpy(), T.to_numpy(), P.to_numpy(), min_imp_timeout=10, guess=[1, 1, 1])
 result = optimizer.optimize()
 
 print(f'Best tuple: {result["best_tuple"]}')

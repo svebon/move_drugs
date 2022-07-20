@@ -67,6 +67,21 @@ class Optimizer:
         n_elements = mat.shape[0] * mat.shape[1]
         return np.sum(mat) / n_elements
 
+    def get_O_R_avg(self, alphas) -> float:
+        """
+        Calculates O_R average for given alphas
+
+        Parameters
+        ----------
+        alphas: list
+            List of floats
+        Returns
+        -------
+        float: O_R average
+        """
+        O_R = self.get_O_R(alphas)
+        return self.mat_avg(O_R)
+
 
 class RandomOptimizer(Optimizer):
     def __init__(self, mat_D, vec_T, mat_P, n_tuples=1000 * 1000, tuples_size=3):
@@ -138,6 +153,7 @@ class GPOptimizer(Optimizer):
 
         self.best_O_R = result.fun
         self.best_tuple = result.x
+        self.best_O_R_avg = self.mat_avg(self.best_O_R)
 
         return {'best_tuple': self.best_tuple, 'best_O_R_avg': self.best_O_R_avg}
 

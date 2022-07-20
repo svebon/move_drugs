@@ -14,7 +14,8 @@ class Optimizer:
     best_O_R: np.ndarray  #: Best O_R
     best_O_R_avg: float = 1  #: Best O_R average
 
-    def __init__(self, mat_D: np.ndarray, vec_T: np.ndarray, mat_P: np.ndarray):
+    def __init__(self, mat_D: np.ndarray, vec_T: np.ndarray, mat_P: np.ndarray, min_imp=0.01,
+                 min_imp_timeout=10):
         """
         Parameters
         ----------
@@ -24,11 +25,18 @@ class Optimizer:
             T vector
         mat_P: np.ndarray
             Drugs-receptors interactions matrix
+        min_imp: float, default: 0.01
+            Minimum improvement to continue optimization
+        min_imp_timeout: int, default: 10
+            Max number of consecutive iterations with an insufficient improvement before stop optimization
         """
         self.mat_D = mat_D
         self.vec_T = vec_T
         self.mat_P = mat_P
         self.N = mat_D.shape[0] * mat_D.shape[1]
+        self.min_imp = min_imp
+        self.min_imp_timeout = min_imp_timeout
+        self.failed_iterations = 0
 
     def get_O_R(self, alphas) -> np.ndarray:
         """
@@ -121,7 +129,8 @@ class RandomOptimizer(Optimizer):
 
 
 class GPOptimizer(Optimizer):
-    def __init__(self, mat_D, vec_T, mat_P, n_tuples=1000 * 1000, tuples_size=3, n_jobs=-1, min_improvement=0.01):
+    def __init__(self, mat_D, vec_T, mat_P, n_tuples=1000 * 1000, tuples_size=3, min_imp=0.01, min_imp_timeout=10,
+                 n_jobs=-1):
         """
         Parameters
         ----------
@@ -131,14 +140,11 @@ class GPOptimizer(Optimizer):
             Size of each tuple
         n_jobs: int, default: -1
             Number of jobs to be used by skopt
-        min_improvement: float, default: 0.01
-            Minimum improvement to continue optimization
         """
-        super().__init__(mat_D, vec_T, mat_P)
+        super().__init__(mat_D, vec_T, mat_P, min_imp, min_imp_timeout)
         self.n_tuples = n_tuples
         self.tuples_size = tuples_size
         self.n_jobs = n_jobs
-        self.min_improvement = min_improvement
 
     def optimize(self):
         """
@@ -149,13 +155,25 @@ class GPOptimizer(Optimizer):
         dict: {'best_tuple': self.best_tuple, 'best_O_R': self.best_O_R}
         """
         space = self.space
-        result = gp_minimize(self.get_O_R_avg, space, n_calls=self.n_tuples, n_jobs=self.n_jobs, xi=self.min_improvement)
+        result = gp_minimize(self.get_O_R_avg, space, n_calls=self.n_tuples, n_jobs=self.n_jobs,
+                             callback=self.check_min_imp)
 
-        self.best_O_R = result.fun
+        self.best_O_R_avg = result.fun
         self.best_tuple = result.x
-        self.best_O_R_avg = self.mat_avg(self.best_O_R)
+        self.best_O_R = self.get_O_R(result.x)
 
         return {'best_tuple': self.best_tuple, 'best_O_R_avg': self.best_O_R_avg}
+
+    def check_min_imp(self, result) -> bool:
+        if self.best_O_R_avg - result.fun < self.min_imp:
+            self.failed_iterations += 1
+
+            if self.failed_iterations >= self.min_imp_timeout:
+                return True
+        else:
+            self.failed_iterations = 0
+
+        self.best_O_R_avg = result.fun
 
     @property
     def space(self):

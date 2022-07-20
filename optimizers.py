@@ -149,7 +149,7 @@ class GPOptimizer(Optimizer):
         dict: {'best_tuple': self.best_tuple, 'best_O_R': self.best_O_R}
         """
         space = self.space
-        result = gp_minimize(self.get_O_R, space, n_calls=self.n_tuples, n_jobs=self.n_jobs, xi=self.min_improvement)
+        result = gp_minimize(self.get_O_R_avg, space, n_calls=self.n_tuples, n_jobs=self.n_jobs, xi=self.min_improvement)
 
         self.best_O_R = result.fun
         self.best_tuple = result.x

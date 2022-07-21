@@ -274,7 +274,6 @@ class BHOptimizer(Optimizer):
         self.timeout = timeout
         self.min_imp = min_imp
         self.min_imp_timeout = min_imp_timeout
-        self.pbar = tqdm(desc='Testing tuples', total=self.n_tuples)
 
     def optimize(self):
         """

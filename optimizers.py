@@ -11,9 +11,9 @@ from scipy.optimize import OptimizeResult
 
 @dataclasses.dataclass
 class BestResult:
-    _alphas: np.ndarray
-    _O_R: np.ndarray
-    _O_R_avg: float
+    _alphas: np.ndarray = None
+    _O_R: np.ndarray = None
+    _O_R_avg: float = 1
 
     def update(self, result: OptimizeResult = None, new_alphas: np.ndarray = None, new_O_R_avg: float = None,
                new_O_R: np.ndarray = None):
@@ -75,9 +75,7 @@ class Optimizer:
     """
     Optimizer interface
     """
-    best_tuple: tuple = None  #: Best tuple of alphas
-    best_O_R: np.ndarray  #: Best O_R
-    best_O_R_avg: float = 1  #: Best O_R average
+    best_result = BestResult()  #: Best result
 
     def __init__(self, mat_D: np.ndarray, vec_T: np.ndarray, mat_P: np.ndarray, n_tuples: int = 1000 * 1000,
                  tuples_size: int = 3, min_imp=0.01, min_imp_timeout=10):
@@ -133,12 +131,12 @@ class Optimizer:
         return O_R
 
     def better(self, O_R: np.ndarray):
-        return self.mat_avg(O_R) < self.best_O_R_avg
+        return self.mat_avg(O_R) < self.best_result.O_R_avg
 
-    # Must set self.best_tuple and self.best_O_R and return {'best_tuple': self.best_tuple, 'best_O_R_avg': self.best_O_R_avg}
+    # Must set self.best_result and return it
     def optimize(self):
         """
-        Must set self.best_tuple and self.best_O_R and return {'best_tuple': self.best_tuple, 'best_O_R_avg': self.best_O_R_avg}
+        Must set self.best_result and return it
         """
         raise NotImplementedError
 
@@ -183,11 +181,9 @@ class RandomOptimizer(Optimizer):
                 O_R = self.get_O_R(t)
 
                 if self.better(O_R):
-                    self.best_tuple = t
-                    self.best_O_R = O_R
-                    self.best_O_R_avg = self.mat_avg(O_R)
+                    self.best_result.update(new_alphas=t, new_O_R=O_R, new_O_R_avg=self.mat_avg(O_R))
 
-        return {'best_tuple': self.best_tuple, 'best_O_R_avg': self.best_O_R_avg}
+        return self.best_result
 
 
 class GPOptimizer(Optimizer):
@@ -219,24 +215,22 @@ class GPOptimizer(Optimizer):
                              callback=self.check_min_imp)
         warnings.simplefilter('default')
 
-        self.best_O_R_avg = result.fun
-        self.best_tuple = result.x
-        self.best_O_R = self.get_O_R(result.x)
+        self.best_result.update(result=result, new_O_R=self.get_O_R(result.x))
 
         if self.pbar:
             self.pbar.set_description('Completed')
             self.pbar.close()
 
-        return {'best_tuple': self.best_tuple, 'best_O_R_avg': self.best_O_R_avg}
+        return self.best_result
 
     def check_min_imp(self, result) -> bool:
-        if result.fun > self.best_O_R_avg:
+        if result.fun > self.best_result.O_R_avg:
             self.pbar.update()
             return False
 
-        if self.best_O_R_avg - result.fun < self.min_imp:
+        if self.best_result.O_R_avg - result.fun < self.min_imp:
             self.failed_iterations += 1
-            self.pbar.set_postfix(best_O_R=self.best_O_R_avg, fails=f'{self.failed_iterations}/{self.min_imp_timeout}')
+            self.pbar.set_postfix(best_O_R=self.best_result.O_R_avg, fails=f'{self.failed_iterations}/{self.min_imp_timeout}')
 
             if self.failed_iterations >= self.min_imp_timeout:
                 self.pbar.set_description('Min Improvement timeout reached')
@@ -245,7 +239,7 @@ class GPOptimizer(Optimizer):
         else:
             self.failed_iterations = 0
 
-        self.best_O_R_avg = result.fun
+        self.best_result.O_R_avg = result.fun
         self.pbar.update()
 
     @property
@@ -293,15 +287,13 @@ class BHOptimizer(Optimizer):
         result = basinhopping(self.get_O_R_avg, self.guess, niter=self.n_tuples, niter_success=self.timeout,
                               callback=self.check_min_imp, accept_test=self.acceptable)
 
-        self.best_O_R_avg = result.fun
-        self.best_tuple = result.x
-        self.best_O_R = self.get_O_R(result.x)
+        self.best_result.update(result=result, new_O_R=self.get_O_R(result.x))
 
         if self.pbar:
             self.pbar.set_description('Completed')
             self.pbar.close()
 
-        return {'best_tuple': self.best_tuple, 'best_O_R_avg': self.best_O_R_avg}
+        return self.best_result
 
     def acceptable(self, f_new, x_new, f_old, x_old):
         return f_new <= self.best_O_R_avg and self.acceptable_alphas(x_new)
@@ -310,9 +302,9 @@ class BHOptimizer(Optimizer):
         if not accepted:
             return False
 
-        if self.best_O_R_avg - O_R_avg < self.min_imp:
+        if self.best_result.O_R_avg - O_R_avg < self.min_imp:
             self.failed_iterations += 1
-            self.pbar.set_postfix(best_O_R=self.best_O_R_avg,
+            self.pbar.set_postfix(best_O_R=self.best_result.O_R_avg,
                                   fails=f'{self.failed_iterations}/{self.min_imp_timeout}')
 
             if self.failed_iterations >= self.min_imp_timeout:
@@ -322,7 +314,7 @@ class BHOptimizer(Optimizer):
         else:
             self.failed_iterations = 0
 
-        self.best_O_R_avg = O_R_avg
+        self.best_result.O_R_avg = O_R_avg
         self.pbar.update()
 
     @staticmethod

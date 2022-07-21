@@ -56,6 +56,20 @@ class BestResult:
 
         self._O_R = new_O_R
 
+    @property
+    def O_R_avg(self) -> float:
+        return self._O_R_avg
+
+    @O_R_avg.setter
+    def O_R_avg(self, new_O_R_avg: float):
+        if not isinstance(new_O_R_avg, float):
+            raise TypeError('new_O_R_avg must be a float')
+
+        if new_O_R_avg > self.O_R_avg:
+            raise ValueError("new_O_R_avg can't be worst than the current one")
+
+        self._O_R_avg = new_O_R_avg
+
 
 class Optimizer:
     """

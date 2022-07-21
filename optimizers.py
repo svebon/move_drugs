@@ -15,8 +15,8 @@ class Optimizer:
     best_O_R: np.ndarray  #: Best O_R
     best_O_R_avg: float = 1  #: Best O_R average
 
-    def __init__(self, mat_D: np.ndarray, vec_T: np.ndarray, mat_P: np.ndarray, min_imp=0.01,
-                 min_imp_timeout=10):
+    def __init__(self, mat_D: np.ndarray, vec_T: np.ndarray, mat_P: np.ndarray, n_tuples: int = 1000 * 1000,
+                 tuples_size: int = 3, min_imp=0.01, min_imp_timeout=10):
         """
         Parameters
         ----------
@@ -26,6 +26,10 @@ class Optimizer:
             T vector
         mat_P: np.ndarray
             Drugs-receptors interactions matrix
+        n_tuples: int
+            Number of tuples to test
+        tuples_size: int
+            Size of tested tuples
         min_imp: float, default: 0.01
             Minimum improvement to continue optimization
         min_imp_timeout: int, default: 10
@@ -35,9 +39,12 @@ class Optimizer:
         self.vec_T = vec_T
         self.mat_P = mat_P
         self.N = mat_D.shape[0] * mat_D.shape[1]
+        self.n_tuples = n_tuples
+        self.tuples_size = tuples_size
         self.min_imp = min_imp
         self.min_imp_timeout = min_imp_timeout
         self.failed_iterations = 0
+        self.pbar = tqdm(desc='Testing tuples', total=self.n_tuples)
 
     def get_O_R(self, alphas) -> np.ndarray:
         """
@@ -94,17 +101,7 @@ class Optimizer:
 
 class RandomOptimizer(Optimizer):
     def __init__(self, mat_D, vec_T, mat_P, n_tuples=1000 * 1000, tuples_size=3):
-        """
-        Parameters
-        ----------
-        n_tuples: int, default: 1000000
-            Number of random tuples to be tested
-        tuples_size: int, default: 3
-            Size of each tuple
-        """
-        super().__init__(mat_D, vec_T, mat_P)
-        self.n_tuples = n_tuples
-        self.tuples_size = tuples_size
+        super().__init__(mat_D, vec_T, mat_P, n_tuples, tuples_size)
 
     def optimize(self):
         """
@@ -135,18 +132,14 @@ class GPOptimizer(Optimizer):
         """
         Parameters
         ----------
-        n_tuples: int, default: 1000000
-            Number of random tuples to be tested
-        tuples_size: int, default: 3
-            Size of each tuple
         n_jobs: int, default: -1
             Number of jobs to be used by skopt
         """
-        super().__init__(mat_D, vec_T, mat_P, min_imp, min_imp_timeout)
+        super().__init__(mat_D, vec_T, mat_P, n_tuples=n_tuples, tuples_size=tuples_size,
+                         min_imp=min_imp, min_imp_timeout=min_imp_timeout)
         self.n_tuples = n_tuples
         self.tuples_size = tuples_size
         self.n_jobs = n_jobs
-        self.pbar = tqdm(desc='Testing tuples', total=self.n_tuples)
 
     def optimize(self):
         """
@@ -210,20 +203,13 @@ class BHOptimizer(Optimizer):
 
         Parameters
         ----------
-        n_tuples: int, default: 1000000
-            Number of random tuples to be tested
-        tuples_size: int, default: 3
-            Size of each tuple
         guess: list, default: [0.5, 0.5, 0.5]
             Initial guess for alphas
         timeout: int, default: 1000
             Maximum number of iterations that can be performed without improvement
-        min_imp: float, default: 0.01
-            Minimum improvement to consider the last iteration as a success
-        min_imp_timeout
-            Maximum number of iterations that can be performed without relevant improvements
         """
-        super().__init__(mat_D, vec_T, mat_P)
+        super().__init__(mat_D, vec_T, mat_P, n_tuples=n_tuples, tuples_size=tuples_size,
+                         min_imp=min_imp, min_imp_timeout=min_imp_timeout)
         self.n_tuples = n_tuples
         self.tuples_size = tuples_size
         self.guess = guess

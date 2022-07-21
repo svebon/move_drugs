@@ -5,6 +5,56 @@ from skopt.space import Real
 from skopt import gp_minimize
 from scipy.optimize import basinhopping
 import warnings
+import dataclasses
+from scipy.optimize import OptimizeResult
+
+
+@dataclasses.dataclass
+class BestResult:
+    _alphas: np.ndarray
+    _O_R: np.ndarray
+    _O_R_avg: float
+
+    def update(self, result: OptimizeResult = None, new_alphas: np.ndarray = None, new_O_R_avg: float = None,
+               new_O_R: np.ndarray = None):
+        if not new_O_R:
+            raise ValueError('new_O_R must be provided')
+
+        if result is not None:
+            new_alphas = result.x
+            new_O_R_avg = result.fun
+
+        self._alphas = new_alphas
+        self._O_R = new_O_R
+        self._O_R_avg = new_O_R_avg
+
+    @property
+    def alphas(self):
+        return self._alphas
+
+    @alphas.setter
+    def alphas(self, new_alphas: np.ndarray):
+        if not isinstance(new_alphas, np.ndarray):
+            raise TypeError('new_alphas must be a numpy array')
+
+        if new_alphas.ndim > 1:
+            raise ValueError('new_alphas must be a 1D array')
+
+        self._alphas = new_alphas
+
+    @property
+    def O_R(self):
+        return self._O_R
+
+    @O_R.setter
+    def O_R(self, new_O_R: np.ndarray):
+        if not isinstance(new_O_R, np.ndarray):
+            raise TypeError('new_alphas must be a numpy array')
+
+        if new_O_R.ndim != 2:
+            raise ValueError('new_O_R must be a 2D array')
+
+        self._O_R = new_O_R
 
 
 class Optimizer:

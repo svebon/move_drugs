@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 from generator import RandomGenerator
 from tqdm import tqdm
+from data_parsing import *
+from optimizers import *
 
 
 def parse_D(D_df: pd.DataFrame, T_df: pd.DataFrame) -> pd.DataFrame:
@@ -40,45 +42,24 @@ input_P = 'C:/Users/Sveva/Desktop/ML_datasets/matrix_P.csv'
 nodes = 'C:/Users/Sveva/Desktop/ML_datasets/new_mapped_name.csv'
 
 # Data loading
-content_D = pd.read_csv(input_D, sep=',', index_col=0)
-content_T = pd.read_csv(input_T)
-nodes_df = pd.read_csv(nodes, sep=';', index_col='name_T')
-content_P = pd.read_csv(input_P, sep=';', index_col=0).transpose().apply(pd.to_numeric)
+names_map = NamesMap()
+names_map.load(nodes)
 
-# DataFrames parsing
-D = parse_D(content_D, content_T)
-T = parse_T(content_T, nodes_df)
-P = parse_P(content_P, content_T)
+D = DockingEnergies()
+T = Topology(names_map)
+P = Interactions()
 
-# Matrices and vectors creation
-mat_D = D.to_numpy()
+D.load(input_D)
+T.load(input_T)
+P.load(input_P)
 
-vec_T = T.to_numpy()
-vec_T = np.reshape(vec_T, (vec_T.shape[0],))
+D.filter_receptors(T.receptors)
+P.filter_receptors(T.receptors)
 
-mat_P = P.to_numpy()
+# optimizer = RandomOptimizer(D.to_numpy(), T.to_numpy(), P.to_numpy())
+# optimizer = GPOptimizer(D.to_numpy(), T.to_numpy(), P.to_numpy(), min_imp_timeout=50)
+optimizer = BHOptimizer(D.to_numpy(), T.to_numpy(), P.to_numpy(), min_imp_timeout=10, guess=[1, 1, 1])
+result = optimizer.optimize()
 
-# Tuples testing
-tuples = RandomGenerator(N_TUPLES, TUPLES_SIZE)
-
-N = mat_D.shape[0] * mat_D.shape[1]
-
-best_tuple = None
-best_O_R = 1
-
-for t in tqdm(tuples, desc='Testing tuples', total=N_TUPLES):
-    a1, a2, a3 = t
-
-    w_D = np.multiply(a1, mat_D)
-    w_T = np.multiply(a2, vec_T)
-
-    S = w_D + w_T + a3
-
-    O_R = np.sqrt((S - mat_P) ** 2) / N
-
-    if O_R < best_O_R:
-        best_tuple = t
-        best_O_R = O_R
-
-print(f'Best tuple: {best_tuple}')
-print(f'Best O_R: {best_O_R}')
+print(f'Best tuple: {result["best_tuple"]}')
+print(f'Best O_R: {result["best_O_R_avg"]}')

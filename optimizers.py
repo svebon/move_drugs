@@ -17,7 +17,7 @@ class BestResult:
 
     def update(self, result: OptimizeResult = None, new_alphas: np.ndarray = None, new_O_R_avg: float = None,
                new_O_R: np.ndarray = None):
-        if not new_O_R:
+        if new_O_R is None:
             raise ValueError('new_O_R must be provided')
 
         if result is not None:

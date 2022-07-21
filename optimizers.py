@@ -296,7 +296,7 @@ class BHOptimizer(Optimizer):
         return self.best_result
 
     def acceptable(self, f_new, x_new, f_old, x_old):
-        return f_new <= self.best_O_R_avg and self.acceptable_alphas(x_new)
+        return f_new <= self.best_result.O_R_avg and self.acceptable_alphas(x_new)
 
     def check_min_imp(self, x, O_R_avg, accepted) -> bool:
         if not accepted:

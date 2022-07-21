@@ -75,7 +75,6 @@ class Optimizer:
     """
     Optimizer interface
     """
-    best_result = BestResult()  #: Best result
 
     def __init__(self, mat_D: np.ndarray, vec_T: np.ndarray, mat_P: np.ndarray, n_tuples: int = 1000 * 1000,
                  tuples_size: int = 3, min_imp=0.01, min_imp_timeout=10):
@@ -105,8 +104,9 @@ class Optimizer:
         self.tuples_size = tuples_size
         self.min_imp = min_imp
         self.min_imp_timeout = min_imp_timeout
-        self.failed_iterations = 0
         self.pbar = tqdm(desc='Testing tuples', total=self.n_tuples)
+        self.best_result = BestResult()  #: Best result
+        self.failed_iterations = 0  #: Numer of consecutive iterations with an insufficient improvement
 
     def get_O_R(self, alphas) -> np.ndarray:
         """
@@ -159,6 +159,31 @@ class Optimizer:
         """
         O_R = self.get_O_R(alphas)
         return self.mat_avg(O_R)
+
+    def poor_improvement(self, new_O_R_avg: float):
+        return abs(new_O_R_avg - self.best_result.O_R_avg) < self.min_imp
+
+    def check_improvement(self, new_O_R_avg: float):
+        if new_O_R_avg > self.best_result.O_R_avg:
+            self.failed_iterations += 1
+            self.pbar.set_postfix(best_O_R=self.best_result.O_R_avg,
+                                  fails=f'{self.failed_iterations}/{self.min_imp_timeout}')
+            self.pbar.update()
+            return False
+
+        if self.poor_improvement(new_O_R_avg):
+            self.failed_iterations += 1
+        else:
+            self.failed_iterations = 0
+
+        self.best_result.O_R_avg = new_O_R_avg
+        self.pbar.set_postfix(best_O_R=self.best_result.O_R_avg,
+                              fails=f'{self.failed_iterations}/{self.min_imp_timeout}')
+
+        if self.failed_iterations >= self.min_imp_timeout:
+            self.pbar.set_description('Min Improvement timeout reached')
+            self.pbar.close()
+            return True  # Stop optimization
 
 
 class RandomOptimizer(Optimizer):
@@ -213,35 +238,16 @@ class GPOptimizer(Optimizer):
         space = self.space
         warnings.simplefilter('ignore')
         result = gp_minimize(self.get_O_R_avg, space, n_calls=self.n_tuples, n_jobs=self.n_jobs,
-                             callback=self.check_min_imp)
+                             callback=lambda res: self.check_improvement(res.fun))
         warnings.simplefilter('default')
 
         self.best_result.update(result=result, new_O_R=self.get_O_R(result.x))
 
-        if self.pbar:
+        if not self.pbar.disable:
             self.pbar.set_description('Completed')
             self.pbar.close()
 
         return self.best_result
-
-    def check_min_imp(self, result) -> bool:
-        if result.fun > self.best_result.O_R_avg:
-            self.pbar.update()
-            return False
-
-        if self.best_result.O_R_avg - result.fun < self.min_imp:
-            self.failed_iterations += 1
-            self.pbar.set_postfix(best_O_R=self.best_result.O_R_avg, fails=f'{self.failed_iterations}/{self.min_imp_timeout}')
-
-            if self.failed_iterations >= self.min_imp_timeout:
-                self.pbar.set_description('Min Improvement timeout reached')
-                self.pbar.close()
-                return True
-        else:
-            self.failed_iterations = 0
-
-        self.best_result.O_R_avg = result.fun
-        self.pbar.update()
 
     @property
     def space(self):
@@ -285,11 +291,12 @@ class BHOptimizer(Optimizer):
         dict: {'best_tuple': self.best_tuple, 'best_O_R': self.best_O_R}
         """
         result = basinhopping(self.get_O_R_avg, self.guess, niter=self.n_tuples, niter_success=self.timeout,
-                              callback=self.check_min_imp, accept_test=self.acceptable)
+                              callback=lambda x, fun, accepted: self.check_improvement(fun) if accepted else None,
+                              accept_test=self.acceptable)
 
         self.best_result.update(result=result, new_O_R=self.get_O_R(result.x))
 
-        if self.pbar:
+        if not self.pbar.disable:
             self.pbar.set_description('Completed')
             self.pbar.close()
 
@@ -298,27 +305,8 @@ class BHOptimizer(Optimizer):
     def acceptable(self, f_new, x_new, f_old, x_old):
         return f_new <= self.best_result.O_R_avg and self.acceptable_alphas(x_new)
 
-    def check_min_imp(self, x, O_R_avg, accepted) -> bool:
-        if not accepted:
-            return False
-
-        if self.best_result.O_R_avg - O_R_avg < self.min_imp:
-            self.failed_iterations += 1
-            self.pbar.set_postfix(best_O_R=self.best_result.O_R_avg,
-                                  fails=f'{self.failed_iterations}/{self.min_imp_timeout}')
-
-            if self.failed_iterations >= self.min_imp_timeout:
-                self.pbar.set_description('Min Improvement timeout reached')
-                self.pbar.close()
-                return True
-        else:
-            self.failed_iterations = 0
-
-        self.best_result.O_R_avg = O_R_avg
-        self.pbar.update()
-
     @staticmethod
-    def acceptable_alphas(alphas):
+    def acceptable_alphas(alphas: np.ndarray):
         """
         Check if all alphas are in [0, 1] range
         Parameters
@@ -330,7 +318,5 @@ class BHOptimizer(Optimizer):
         -------
         bool: True if all alphas are in [0, 1] range, False otherwise
         """
-        for alpha in alphas:
-            if not 0 <= alpha <= 1:
-                return False
-        return True
+
+        return np.all((alphas >= 0) & (alphas <= 1))

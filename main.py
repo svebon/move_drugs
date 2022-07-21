@@ -1,36 +1,5 @@
-import numpy as np
-import pandas as pd
-from generator import RandomGenerator
-from tqdm import tqdm
 from data_parsing import *
 from optimizers import *
-
-
-def parse_D(D_df: pd.DataFrame, T_df: pd.DataFrame) -> pd.DataFrame:
-    df = D_df.copy()
-    df = df.reindex(sorted(df.columns), axis=1)
-    df = df.drop(['Drugs'], axis=1)
-    df = df.apply(pd.to_numeric)
-    df = df[[col for col in df.columns if col in T_df.index]]
-    return df
-
-
-def parse_T(T_df: pd.DataFrame, nodes_df: pd.DataFrame) -> pd.DataFrame:
-    df = T_df.copy()
-    df = df.reindex(sorted(df.columns), axis=1)
-    df['mapped name'] = df["shared name"].apply(lambda x: nodes_df.loc[x]['name_D'] if x in nodes_df.index else None)
-    df = df[df['mapped name'].notna()]
-    df = df[['mapped name', 'BetweennessCentrality']]
-    df = df.set_index('mapped name', drop=True)
-    return df
-
-
-def parse_P(P_df: pd.DataFrame, T_df: pd.DataFrame) -> pd.DataFrame:
-    df = P_df.copy()
-    df = df.reindex(sorted(df.columns), axis=1)
-    df = df[[col for col in df.columns if col in T_df.index]]
-    return df
-
 
 TUPLES_SIZE = 3
 N_TUPLES = 10

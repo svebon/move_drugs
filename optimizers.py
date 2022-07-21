@@ -176,12 +176,13 @@ class RandomOptimizer(Optimizer):
         """
         tuples = RandomGenerator(self.n_tuples, self.tuples_size)
 
-        with tqdm(tuples, desc='Testing tuples', total=self.n_tuples) as pbar:
-            for t in pbar:
-                O_R = self.get_O_R(t)
+        for t in tuples:
+            O_R = self.get_O_R(t)
 
-                if self.better(O_R):
-                    self.best_result.update(new_alphas=t, new_O_R=O_R, new_O_R_avg=self.mat_avg(O_R))
+            if self.better(O_R):
+                self.best_result.update(new_alphas=t, new_O_R=O_R, new_O_R_avg=self.mat_avg(O_R))
+
+            self.pbar.update()
 
         return self.best_result
 

@@ -9,11 +9,15 @@ import dataclasses
 from scipy.optimize import OptimizeResult
 
 
+# TODO: fix GP's and BH's progress bar
+
+
 @dataclasses.dataclass
 class BestResult:
-    _alphas: np.ndarray = None
-    _O_R: np.ndarray = None
-    _O_R_avg: float = 1
+    def __init__(self):
+        self._alphas = None
+        self._O_R = None
+        self._O_R_avg = 1
 
     def update(self, result: OptimizeResult = None, new_alphas: np.ndarray = None, new_O_R_avg: float = None,
                new_O_R: np.ndarray = None):

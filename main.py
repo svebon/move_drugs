@@ -25,8 +25,11 @@ D.load(paths['input_D'])
 T.load(paths['input_T'])
 P.load(paths['input_P'])
 
-D.filter_receptors(T.receptors)
-P.filter_receptors(T.receptors)
+common_recs = common_receptors(D.receptors, T.receptors, P.receptors)
+
+D.filter_receptors(common_recs)
+T.filter_receptors(common_recs)
+P.filter_receptors(common_recs)
 
 rand_optimizer = RandomOptimizer(D.to_numpy(), T.to_numpy(), P.to_numpy())
 gp_optimizer = GPOptimizer(D.to_numpy(), T.to_numpy(), P.to_numpy(), min_imp_timeout=50)

@@ -1,5 +1,9 @@
 import pandas as pd
-from typing import Union
+
+
+def common_receptors(*args) -> list:
+    intersection = set.intersection(*map(set, args))
+    return list(intersection)
 
 
 class NamesMap:
@@ -26,7 +30,7 @@ class NamesMap:
 
 class CustomDataFrame:
     def __init__(self):
-        self.data = Union[pd.DataFrame, pd.Series]
+        self.data = None
         self.csv_sep = ';'
 
     def sort(self):
@@ -44,7 +48,8 @@ class CustomDataFrame:
         raise NotImplementedError
 
     def filter_receptors(self, receptors: list):
-        self.data = self.data[receptors]
+        common_receptors = [rec for rec in self.receptors if rec in receptors]
+        self.data = self.data[common_receptors]
 
     def to_numpy(self):
         if isinstance(self.data, pd.DataFrame):

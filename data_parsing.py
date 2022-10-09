@@ -6,6 +6,11 @@ def common_receptors(*args) -> list:
     return list(intersection)
 
 
+def common_drugs(*args) -> list:
+    intersection = set.intersection(*map(set, args))
+    return list(intersection)
+
+
 class NamesMap:
     def __init__(self):
         self.map = {}
@@ -40,6 +45,9 @@ class CustomDataFrame:
     def remove_unnamed_cols(self):
         self.data = self.data.drop([col for col in self.data.columns if 'Unnamed' in col], axis='columns')
 
+    def remove_none_cols(self):
+        self.data = self.data.drop(labels=None, axis='columns')
+
     def load(self, path: str):
         self.data = pd.read_csv(path, sep=self.csv_sep)
 
@@ -47,9 +55,17 @@ class CustomDataFrame:
     def receptors(self):
         raise NotImplementedError
 
+    @property
+    def drugs(self):
+        raise NotImplementedError
+
     def filter_receptors(self, receptors: list):
         common_receptors = [rec for rec in self.receptors if rec in receptors]
         self.data = self.data[common_receptors]
+
+    def filter_drugs(self, drugs: list):
+        common_drugs = [drug for drug in self.data.index if drug in drugs]
+        self.data = self.data.loc[common_drugs]
 
     def to_numpy(self):
         if isinstance(self.data, pd.DataFrame):
@@ -64,11 +80,16 @@ class DockingEnergies(CustomDataFrame):
         self.csv_sep = ','
         self.names_map = names_map
 
+    @property
+    def drugs(self):
+        return self.data.index.tolist()
+
     def load(self, path: str):
         super().load(path)
         self.data = self.data.set_index('Drugs', drop=True)
         self.remove_unnamed_cols()
         self.data.columns = self.data.columns.map(self.names_map.map_name)
+        # self.remove_none_cols()
         self.sort()
         self.data = self.data.apply(pd.to_numeric)
 
@@ -80,18 +101,24 @@ class DockingEnergies(CustomDataFrame):
 class Interactions(CustomDataFrame):
     def __init__(self, names_map: NamesMap):
         super().__init__()
+        self.csv_sep = ','
         self.names_map = names_map
 
     def load(self, path: str):
         super().load(path)
         self.data = self.data.set_index(self.data.columns[0], drop=True)
         self.data.index = self.data.index.rename('Receptors')
-        self.data = self.data.transpose()
+        # self.data.columns = self.data.columns.map(self.names_map.map_name)
+        # self.data = self.data.transpose()
         self.remove_unnamed_cols()
-        self.data.columns = self.data.columns.map(self.names_map.map_name)
+        # self.remove_none_cols()
         self.sort()
         self.data = self.data.apply(pd.to_numeric)
         self.data.index = self.data.index.rename('Drugs')
+
+    @property
+    def drugs(self):
+        return self.data.index.tolist()
 
     @property
     def receptors(self):

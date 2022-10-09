@@ -108,7 +108,7 @@ class Optimizer:
         self.tuples_size = tuples_size
         self.min_imp = min_imp
         self.min_imp_timeout = min_imp_timeout
-        self.pbar = tqdm(desc='Testing tuples', total=self.n_tuples)
+        self.pbar = tqdm(desc='Testing tuples', total=self.n_tuples, leave=False)
         self.best_result = BestResult()  #: Best result
         self.failed_iterations = 0  #: Numer of consecutive iterations with an insufficient improvement
 

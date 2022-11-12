@@ -10,18 +10,63 @@ from time import time
 
 
 def compare_optimizers(optimizers: list):
+    """Compare optimizers on the same dataset and print results
+
+    Parameters
+    ----------
+    optimizers : list
+        List of optimizers to compare
+
+    Returns
+    -------
+    None
+    """
     [optimizer.optimize() for optimizer in optimizers]
     [print(f'{optimizer.__class__.__name__}: {optimizer.best_result.O_R_avg} | {optimizer.best_result.alphas}') for
      optimizer in optimizers]
 
 
 def split_data(data: pd.DataFrame, train_recs: list, test_recs: list) -> tuple:
+    """Split data into train and test sets.
+
+    Split data into train and test sets, based on the receptors in the train and test sets.
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        Dataframe to split
+    train_recs : list
+        List of receptors in the train set
+    test_recs : list
+        List of receptors in the test set
+
+    Returns
+    -------
+    tuple
+        Tuple of train and test dataframes
+    """
     train_data = data[train_recs]
     test_data = data[test_recs]
     return train_data, test_data
 
 
 def split_receptors(receptors: list, train_ratio: float = 0.75) -> tuple:
+    """Split receptors into train and test sets.
+
+    Split receptors into train and test sets, based on the given ratio (train set size/dataset size).
+
+    Parameters
+    ----------
+    receptors : list
+        List of receptors to split
+    train_ratio : float
+        Ratio of train set size/dataset size
+
+    Returns
+    -------
+    tuple
+        Tuple of train and test receptors lists
+    """
     train_size = ceil(len(receptors) * train_ratio)
     train = receptors[:train_size]
     test = receptors[train_size:]
@@ -30,15 +75,52 @@ def split_receptors(receptors: list, train_ratio: float = 0.75) -> tuple:
 
 
 def label_O_R(matrix: np.array, receptors: list, drugs: list) -> pd.DataFrame:
+    """Label the O_R matrix with receptors and drugs names.
+
+    Parameters
+    ----------
+    matrix : np.array
+        O_R matrix
+    receptors : list
+        List of receptors
+    drugs : list
+        List of drugs
+
+    Returns
+    -------
+    pd.DataFrame
+        Dataframe with labeled O_R matrix
+    """
     labeled_O_R = pd.DataFrame(matrix, index=drugs, columns=receptors)
     return labeled_O_R
 
 
 def pick_random_drugs(drugs: list, n: int) -> list:
+    """Pick n random drugs from the given list.
+
+    Parameters
+    ----------
+    drugs : list
+        List of drugs to pick from
+    n : int
+        Number of drugs to pick
+
+    Returns
+    -------
+    list
+        List of n random drugs
+    """
     return random.sample(drugs, n)
 
 
 def write_to_file():
+    """Write results to file.
+
+    Write the following information to file:
+    - Train dataframes
+    - Test dataframes
+    - Optimizers results
+    """
     file = open(f'data_{time()}.txt', 'w')
 
     file.write('Train D\n')
@@ -63,7 +145,21 @@ def write_to_file():
     file.close()
 
 
-def drug_receptor_prob(drug: str, receptor: str):
+def drug_receptor_prob(drug: str, receptor: str) -> float:
+    """Calculate the probability of a drug-receptor interaction
+
+    Parameters
+    ----------
+    drug : str
+        Drug name
+    receptor : str
+        Receptor name
+
+    Returns
+    -------
+    float
+        Probability of drug-receptor interaction
+    """
     O_R_avgs = [O_R for tuple, opt_name, O_R in results]
     best_O_R_avg = min(O_R_avgs)
     best_index = O_R_avgs.index(best_O_R_avg)

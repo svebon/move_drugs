@@ -2,20 +2,62 @@ import pandas as pd
 
 
 def common_receptors(*args) -> list:
+    """Find common receptors in all dataframes
+
+    Parameters
+    ----------
+    args : list
+        List of dataframes
+
+    Returns
+    -------
+    list
+        List of common receptors
+    """
     intersection = set.intersection(*map(set, args))
     return list(intersection)
 
 
 def common_drugs(*args) -> list:
+    """Find common drugs in all dataframes
+
+    Parameters
+    ----------
+    args : list
+        List of dataframes
+
+    Returns
+    -------
+    list
+        List of common drugs
+    """
     intersection = set.intersection(*map(set, args))
     return list(intersection)
 
 
 class NamesMap:
+    """Map names in dataset
+
+    Given a CSV file, with a pair of names in each row, create a symmetric map
+    """
+
     def __init__(self):
         self.map = {}
 
     def load(self, path: str):
+        """Load CSV file with name pairs
+
+        Load CSV file with name pairs, and populate the map.
+
+        Parameters
+        ----------
+        path : str
+            Path to CSV file
+
+        Returns
+        -------
+        None
+        """
         with open(path, 'r') as f:
             f.readline()  # skip header
             lines = [l.strip() for l in f.readlines()]
@@ -30,25 +72,50 @@ class NamesMap:
                 self.map[pair[1]] = pair[0]
 
     def map_name(self, name: str) -> str:
+        """Map name
+
+        Map a name to its equivalent in the map.
+
+        Parameters
+        ----------
+        name : str
+            Name to map
+
+        Returns
+        -------
+        str
+            Mapped name
+        """
         return self.map[name] if name in self.map else None
 
 
 class CustomDataFrame:
+    """Custom DataFrame class that implements some useful methods"""
+
     def __init__(self):
         self.data = None
         self.csv_sep = ';'
 
     def sort(self):
+        """Sort dataframe by index and columns"""
+
+        self.data: pd.DataFrame
         self.data = self.data.sort_index(axis='index')
         self.data = self.data.reindex(sorted(self.data.columns), axis=1)
 
     def remove_unnamed_cols(self):
+        """Remove unnamed columns"""
+
         self.data = self.data.drop([col for col in self.data.columns if 'Unnamed' in col], axis='columns')
 
     def remove_none_cols(self):
+        """Remove columns without name"""
+
         self.data = self.data.drop(labels=None, axis='columns')
 
     def load(self, path: str):
+        """Load CSV file into dataframe"""
+
         self.data = pd.read_csv(path, sep=self.csv_sep)
 
     @property
@@ -60,14 +127,17 @@ class CustomDataFrame:
         raise NotImplementedError
 
     def filter_receptors(self, receptors: list):
+        """Filter dataframe by the given receptors"""
         common_receptors = [rec for rec in self.receptors if rec in receptors]
         self.data = self.data[common_receptors]
 
     def filter_drugs(self, drugs: list):
+        """Filter dataframe by the given drugs"""
         common_drugs = [drug for drug in self.data.index if drug in drugs]
         self.data = self.data.loc[common_drugs]
 
     def to_numpy(self):
+        """Convert dataframe to 1D numpy array"""
         if isinstance(self.data, pd.DataFrame):
             return self.data.to_numpy()
 
@@ -75,6 +145,10 @@ class CustomDataFrame:
 
 
 class DockingEnergies(CustomDataFrame):
+    """Docking energies dataframe
+
+    Subclass of CustomDataFrame where the index is the drugs and the columns are the receptors
+    """
     def __init__(self, names_map: NamesMap):
         super().__init__()
         self.csv_sep = ','
@@ -99,6 +173,10 @@ class DockingEnergies(CustomDataFrame):
 
 
 class Interactions(CustomDataFrame):
+    """Interactions dataframe
+
+    Subclass of CustomDataFrame where the index is the drugs and the columns are the receptors
+    """
     def __init__(self, names_map: NamesMap):
         super().__init__()
         self.csv_sep = ','
@@ -126,6 +204,10 @@ class Interactions(CustomDataFrame):
 
 
 class Topology(CustomDataFrame):
+    """Topology dataframe
+
+    Subclass of CustomDataFrame where the index is the receptors
+    """
     def __init__(self):
         super().__init__()
         self.csv_sep = ','

@@ -31,7 +31,6 @@ drugs_T = interactions_df[interactions_df['GENE'].isin(common_names_T)][['DRUG_N
 
 
 # P creation
-
 drugs = pd.concat([drugs_D, drugs_T])
 drugs = drugs[['DRUG_NAME', 'GENE']]
 
@@ -42,6 +41,7 @@ drugs = drugs.set_index('GENE')
 
 interactions_lists = {rec: list(drugs.loc[rec]['DRUG_NAME']) for rec in P_cols}
 
+# Given i, j, P_ij = 1 if drug i interacts with receptor j, 0 otherwise
 data = {rec: [int(drug in interactions) for drug in P_index] for rec, interactions in interactions_lists.items()}
 
 print(data)
@@ -53,4 +53,5 @@ print(P.to_string())
 
 print(P.describe().to_string())
 
+# Save P as CSV file
 P.to_csv(output_file)

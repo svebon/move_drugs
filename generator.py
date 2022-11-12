@@ -3,6 +3,7 @@ import numpy as np
 
 
 class RandomGenerator:
+    """Iterator that generates random tuples of size tuple_size, n_tuple times"""
     def __init__(self, n_tuple: int, tuple_size: int = 3):
         if n_tuple < 1:
             raise ValueError('n_tuple must be > 0')

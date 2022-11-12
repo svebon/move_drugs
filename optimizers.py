@@ -14,6 +14,8 @@ from scipy.optimize import OptimizeResult
 
 @dataclasses.dataclass
 class BestResult:
+    """Class that contains the best result found by the optimizer"""
+
     def __init__(self):
         self._alphas = None
         self._O_R = None
@@ -21,6 +23,23 @@ class BestResult:
 
     def update(self, result: OptimizeResult = None, new_alphas: np.ndarray = None, new_O_R_avg: float = None,
                new_O_R: np.ndarray = None):
+        """Updates the best result found by the optimizer only if the new result is better than the previous one
+
+        Parameters
+        ----------
+        result : OptimizeResult
+            Result of the optimizer
+        new_alphas : np.ndarray
+            New alphas found by the optimizer
+        new_O_R_avg : float
+            New average O_R found by the optimizer
+        new_O_R : np.ndarray
+            New O_R found by the optimizer
+
+        Returns
+        -------
+        None
+        """
         if new_O_R is None:
             raise ValueError('new_O_R must be provided')
 
@@ -38,6 +57,10 @@ class BestResult:
 
     @alphas.setter
     def alphas(self, new_alphas: np.ndarray):
+        """Set new alphas.
+
+        Checks if the alphas are a 1D array
+        """
         if not isinstance(new_alphas, np.ndarray):
             raise TypeError('new_alphas must be a numpy array')
 
@@ -52,6 +75,10 @@ class BestResult:
 
     @O_R.setter
     def O_R(self, new_O_R: np.ndarray):
+        """Set new O_R.
+
+        Checks if the O_R is a 2D array
+        """
         if not isinstance(new_O_R, np.ndarray):
             raise TypeError('new_alphas must be a numpy array')
 
@@ -66,6 +93,10 @@ class BestResult:
 
     @O_R_avg.setter
     def O_R_avg(self, new_O_R_avg: float):
+        """Set new O_R_avg.
+
+        Checks if the O_R_avg is a float and if it is better than the previous one
+        """
         if not isinstance(new_O_R_avg, float):
             raise TypeError('new_O_R_avg must be a float')
 
@@ -165,9 +196,17 @@ class Optimizer:
         return self.mat_avg(O_R)
 
     def poor_improvement(self, new_O_R_avg: float):
+        """If the difference between the new O_R_avg and the best one is less than min_imp, the improvement is considered poor"""
         return abs(new_O_R_avg - self.best_result.O_R_avg) < self.min_imp
 
     def check_improvement(self, new_O_R_avg: float):
+        """Check the latest O_R average.
+
+        If the O_R avg is greater than the best one, the iteration is considered failed.
+        If the improvement is poor, the iteration is considered failed, reset it otherwise.
+        Else, the iteration is considered successful, save the new best result and reset the failed iterations counter.
+
+        """
         if new_O_R_avg > self.best_result.O_R_avg:
             self.failed_iterations += 1
             self.pbar.set_postfix(best_O_R=self.best_result.O_R_avg,
@@ -195,8 +234,8 @@ class RandomOptimizer(Optimizer):
         super().__init__(mat_D, vec_T, mat_P, n_tuples, tuples_size)
 
     def optimize(self):
-        """
-        Optimize alphas using random tuples.\n
+        """Optimize alphas using random tuples.
+
         On each iteration, a new tuple is generated and tested; if it is better than previous best, it is saved.
 
         Returns
@@ -255,8 +294,7 @@ class GPOptimizer(Optimizer):
 
     @property
     def space(self):
-        """
-        Generates the space of alphas to be tested.
+        """Generate the space of alphas to be tested.
 
         Returns
         -------
@@ -266,6 +304,7 @@ class GPOptimizer(Optimizer):
 
 
 class BHOptimizer(Optimizer):
+    """Find a local minimum for alphas using the Basin-Hopping algorithm."""
     def __init__(self, mat_D, vec_T, mat_P, n_tuples=1000 * 1000, tuples_size=3, guess: list = [0.5, 0.5, 0.5],
                  timeout=1000, min_imp=0.01, min_imp_timeout=100):
         """
@@ -287,8 +326,7 @@ class BHOptimizer(Optimizer):
         self.min_imp_timeout = min_imp_timeout
 
     def optimize(self):
-        """
-        Optimize alphas using Basin Hopping.
+        """Optimize alphas using Basin Hopping.
 
         Returns
         -------
@@ -311,8 +349,8 @@ class BHOptimizer(Optimizer):
 
     @staticmethod
     def acceptable_alphas(alphas: np.ndarray):
-        """
-        Check if all alphas are in [0, 1] range
+        """Check if all alphas are in [0, 1] range
+
         Parameters
         ----------
         alphas: list
